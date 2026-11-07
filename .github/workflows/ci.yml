@@ -38,10 +38,10 @@ jobs:
         run: npm test
       - name: Type check
         run: npm run typecheck
-      - name: Initialize PostgreSQL and guards
+      - name: Apply PostgreSQL migrations and integrity guards
         run: |
-          npx prisma db push
-          npx prisma db execute --file prisma/guards.sql --schema prisma/schema.prisma
+          npx prisma migrate deploy
+          npx prisma migrate status
       - name: PostgreSQL integration tests
         run: npm run test:integration
       - name: Build
