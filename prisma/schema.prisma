@@ -7,18 +7,68 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role { OWNER ADMIN ACCOUNTANT FINANCE_MANAGER VIEWER }
-enum AccountType { ASSET LIABILITY EQUITY REVENUE EXPENSE }
-enum JournalStatus { DRAFT POSTED REVERSED }
-enum PeriodStatus { OPEN LOCKED CLOSED }
-enum PartyKind { CUSTOMER SUPPLIER BOTH }
-enum InvoiceKind { SALE PURCHASE }
-enum InvoiceStatus { DRAFT ISSUED PARTIAL PAID VOID }
-enum TreasuryKind { BANK CASH }
-enum MovementType { RECEIPT PAYMENT TRANSFER }
-enum MovementStatus { DRAFT POSTED }
-enum InstallmentStatus { PENDING PAID CANCELED }
-enum StatementStatus { UNMATCHED MATCHED }
+enum Role {
+  OWNER
+  ADMIN
+  ACCOUNTANT
+  FINANCE_MANAGER
+  VIEWER
+}
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+enum JournalStatus {
+  DRAFT
+  POSTED
+  REVERSED
+}
+enum PeriodStatus {
+  OPEN
+  LOCKED
+  CLOSED
+}
+enum PartyKind {
+  CUSTOMER
+  SUPPLIER
+  BOTH
+}
+enum InvoiceKind {
+  SALE
+  PURCHASE
+}
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PARTIAL
+  PAID
+  VOID
+}
+enum TreasuryKind {
+  BANK
+  CASH
+}
+enum MovementType {
+  RECEIPT
+  PAYMENT
+  TRANSFER
+}
+enum MovementStatus {
+  DRAFT
+  POSTED
+}
+enum InstallmentStatus {
+  PENDING
+  PAID
+  CANCELED
+}
+enum StatementStatus {
+  UNMATCHED
+  MATCHED
+}
 
 model User {
   id           String     @id @default(cuid())
