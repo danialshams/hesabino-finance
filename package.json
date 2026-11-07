@@ -1,0 +1,34 @@
+{
+  "name": "hesabino-finance",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "db:push": "prisma db push",
+    "db:init": "prisma db push && prisma db execute --file prisma/guards.sql --schema prisma/schema.prisma",
+    "db:migrate": "prisma migrate deploy",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run test && npm run typecheck && npm run build",
+    "test:integration": "tsx --test tests/integration.test.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.9.0",
+    "next": "^15.3.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zod": "^3.24.4",
+    "lucide-react": "^0.468.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.0",
+    "@types/react": "^19.0.12",
+    "@types/react-dom": "^19.0.4",
+    "prisma": "^6.9.0",
+    "typescript": "^5.8.2",
+    "tsx": "^4.19.3"
+  }
+}

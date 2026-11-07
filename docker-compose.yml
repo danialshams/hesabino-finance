@@ -1,0 +1,17 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: finance
+      POSTGRES_PASSWORD: finance_dev_only
+      POSTGRES_DB: hesabino
+    ports: ["127.0.0.1:5432:5432"]
+    volumes: ["pg_data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U finance -d hesabino"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+volumes:
+  pg_data:
