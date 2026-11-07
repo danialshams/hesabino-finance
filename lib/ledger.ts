@@ -28,12 +28,12 @@ async function validateLines(tx: Tx, orgId: string, lines: LineInput[]) {
   if (centerIds.length !== await tx.costCenter.count({ where: { orgId, id: { in: centerIds } } })) throw new Error('مرکز هزینه نامعتبر');
   if (projectIds.length !== await tx.financialProject.count({ where: { orgId, id: { in: projectIds } } })) throw new Error('پروژه مالی نامعتبر');
 }
-async function createPostedJournal(tx: Tx, args: { orgId: string; actorId: string; bookedAt: Date; memo: string; source: string; sourceId: string; lines: LineInput[] }) {
+async function createPostedJournal(tx: Tx, args: { orgId: string; actorId: string; bookedAt: Date; memo: string; source: string; sourceId: string; reversalOfId?: string; lines: LineInput[] }) {
   const { orgId, actorId, bookedAt, memo, source, sourceId, lines } = args;
   await validateLines(tx, orgId, lines);
   const period = await findOpenPeriod(tx, orgId, bookedAt);
   const number = await nextNumber(tx, orgId, 'JV');
-  const journal = await tx.journal.create({ data: { orgId, createdBy: actorId, memo, bookedAt, source, sourceId, periodId: period.id, status: 'DRAFT', lines: { create: lines.map(l => ({ accountId: l.accountId, debit: l.debit, credit: l.credit, description: l.description, centerId: l.centerId, projectId: l.projectId })) } } });
+  const journal = await tx.journal.create({ data: { orgId, createdBy: actorId, memo, bookedAt, source, sourceId, reversalOfId: args.reversalOfId || null, periodId: period.id, status: 'DRAFT', lines: { create: lines.map(l => ({ accountId: l.accountId, debit: l.debit, credit: l.credit, description: l.description, centerId: l.centerId, projectId: l.projectId })) } } });
   await tx.journal.update({ where: { id: journal.id }, data: { status: 'POSTED', number, postedAt: new Date() } });
   await audit(tx, orgId, actorId, 'POST', 'Journal', journal.id, undefined, { number, source, sourceId });
   return { ...journal, status: 'POSTED' as const, number };
@@ -78,9 +78,8 @@ export async function reverseJournal(orgId: string, actorId: string, id: string)
     if (!original) throw new Error('سند یافت نشد');
     if (original.status !== 'POSTED') throw new Error('فقط سند قطعی قابل برگشت است');
     if (original.source !== 'MANUAL') throw new Error('برگشت سند سیستمی باید از طریق سند اصلاحی همان بخش انجام شود');
-    const reversed = await createPostedJournal(tx, { orgId, actorId, bookedAt: new Date(), memo: `سند برگشت از ${original.number}`, source: 'REVERSAL', sourceId: id, lines: original.lines.map(l=>({ accountId: l.accountId, debit: l.credit, credit: l.debit, description: l.description || undefined, centerId: l.centerId || undefined, projectId: l.projectId || undefined })) });
+    const reversed = await createPostedJournal(tx, { orgId, actorId, bookedAt: new Date(), memo: `سند برگشت از ${original.number}`, source: 'REVERSAL', sourceId: id, reversalOfId: id, lines: original.lines.map(l=>({ accountId: l.accountId, debit: l.credit, credit: l.debit, description: l.description || undefined, centerId: l.centerId || undefined, projectId: l.projectId || undefined })) });
     await tx.journal.update({ where: { id }, data: { status: 'REVERSED' } });
-    await tx.journal.update({ where: { id: reversed.id }, data: { reversalOfId: id } });
     await audit(tx, orgId, actorId, 'REVERSE', 'Journal', id, undefined, { reversalId: reversed.id });
     return reversed;
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
