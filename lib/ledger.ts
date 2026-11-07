@@ -3,7 +3,7 @@ import { assertBalanced, positive, toIsoDate, toRials } from './money';
 import { prisma } from './prisma';
 
 type Tx = Prisma.TransactionClient;
-export type LineInput = { accountId: string; debit: bigint; credit: bigint; description?: string; centerId?: string; projectId?: string };
+export type LineInput = { accountId: string; debit: bigint; credit: bigint; description?: string | null; centerId?: string | null; projectId?: string | null };
 
 async function audit(tx: Tx, orgId: string, actorId: string, action: string, entity: string, entityId: string, before?: object, after?: object) {
   await tx.auditLog.create({ data: { orgId, actorId, action, entity, entityId, before: before as Prisma.InputJsonValue | undefined, after: after as Prisma.InputJsonValue | undefined } });
