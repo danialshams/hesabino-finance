@@ -1,0 +1,339 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role { OWNER ADMIN ACCOUNTANT FINANCE_MANAGER VIEWER }
+enum AccountType { ASSET LIABILITY EQUITY REVENUE EXPENSE }
+enum JournalStatus { DRAFT POSTED REVERSED }
+enum PeriodStatus { OPEN LOCKED CLOSED }
+enum PartyKind { CUSTOMER SUPPLIER BOTH }
+enum InvoiceKind { SALE PURCHASE }
+enum InvoiceStatus { DRAFT ISSUED PARTIAL PAID VOID }
+enum TreasuryKind { BANK CASH }
+enum MovementType { RECEIPT PAYMENT TRANSFER }
+enum MovementStatus { DRAFT POSTED }
+enum InstallmentStatus { PENDING PAID CANCELED }
+enum StatementStatus { UNMATCHED MATCHED }
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime   @default(now())
+  memberships  Membership[]
+  sessions     Session[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@index([userId])
+}
+
+model Organization {
+  id        String    @id @default(cuid())
+  name      String
+  slug      String    @unique
+  ownerId   String
+  currency  String    @default("IRR")
+  timezone  String    @default("Asia/Tehran")
+  isDemo    Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  members   Membership[]
+  branches  Branch[]
+  accounts  Account[]
+  periods   FiscalPeriod[]
+  journals  Journal[]
+  parties   Party[]
+  invoices  Invoice[]
+  treasury  TreasuryAccount[]
+  movements TreasuryMovement[]
+  budgets   Budget[]
+  centers   CostCenter[]
+  projects  FinancialProject[]
+  recurring RecurringRule[]
+  audit     AuditLog[]
+  counters  DocumentCounter[]
+}
+model Membership {
+  id     String @id @default(cuid())
+  userId String
+  orgId  String
+  role   Role @default(VIEWER)
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  @@unique([userId, orgId])
+  @@index([orgId, role])
+}
+model Branch {
+  id String @id @default(cuid())
+  orgId String
+  name String
+  address String?
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  @@unique([orgId, name])
+}
+model Account {
+  id String @id @default(cuid())
+  orgId String
+  code String
+  name String
+  type AccountType
+  parentId String?
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  parent Account? @relation("AccountTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children Account[] @relation("AccountTree")
+  lines JournalLine[]
+  treasury TreasuryAccount[]
+  budgets Budget[]
+  @@unique([orgId, code])
+  @@index([orgId, type])
+}
+model FiscalPeriod {
+  id String @id @default(cuid())
+  orgId String
+  name String
+  startsAt DateTime @db.Date
+  endsAt DateTime @db.Date
+  status PeriodStatus @default(OPEN)
+  createdAt DateTime @default(now())
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  journals Journal[]
+  @@index([orgId, startsAt, endsAt])
+}
+model Journal {
+  id String @id @default(cuid())
+  orgId String
+  number String?
+  memo String
+  bookedAt DateTime @db.Date
+  status JournalStatus @default(DRAFT)
+  source String @default("MANUAL")
+  sourceId String?
+  periodId String?
+  createdBy String
+  createdAt DateTime @default(now())
+  postedAt DateTime?
+  reversalOfId String? @unique
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  period FiscalPeriod? @relation(fields: [periodId], references: [id], onDelete: Restrict)
+  reversalOf Journal? @relation("Reversals", fields: [reversalOfId], references: [id], onDelete: Restrict)
+  reversedBy Journal? @relation("Reversals")
+  lines JournalLine[]
+  invoice Invoice? @relation("InvoiceJournal")
+  movement TreasuryMovement? @relation("MovementJournal")
+  @@unique([orgId, number])
+  @@index([orgId, bookedAt])
+  @@index([orgId, source, sourceId])
+}
+model JournalLine {
+  id String @id @default(cuid())
+  journalId String
+  accountId String
+  debit BigInt @default(0)
+  credit BigInt @default(0)
+  description String?
+  centerId String?
+  projectId String?
+  journal Journal @relation(fields: [journalId], references: [id], onDelete: Cascade)
+  account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  center CostCenter? @relation(fields: [centerId], references: [id], onDelete: SetNull)
+  project FinancialProject? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  @@index([accountId])
+}
+model Party {
+  id String @id @default(cuid())
+  orgId String
+  kind PartyKind @default(BOTH)
+  name String
+  phone String?
+  email String?
+  taxId String?
+  address String?
+  createdAt DateTime @default(now())
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  invoices Invoice[]
+  movements TreasuryMovement[]
+  @@index([orgId, name])
+}
+model Invoice {
+  id String @id @default(cuid())
+  orgId String
+  number String?
+  partyId String
+  kind InvoiceKind
+  status InvoiceStatus @default(DRAFT)
+  issuedAt DateTime @db.Date
+  dueAt DateTime? @db.Date
+  memo String?
+  subtotal BigInt @default(0)
+  discount BigInt @default(0)
+  tax BigInt @default(0)
+  total BigInt @default(0)
+  paid BigInt @default(0)
+  journalId String? @unique
+  createdAt DateTime @default(now())
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  party Party @relation(fields: [partyId], references: [id], onDelete: Restrict)
+  journal Journal? @relation("InvoiceJournal", fields: [journalId], references: [id], onDelete: Restrict)
+  lines InvoiceLine[]
+  movements TreasuryMovement[]
+  installments Installment[]
+  @@unique([orgId, number])
+  @@index([orgId, issuedAt, status])
+  @@index([orgId, dueAt])
+}
+model InvoiceLine {
+  id String @id @default(cuid())
+  invoiceId String
+  description String
+  quantity Int
+  unitPrice BigInt
+  discount BigInt @default(0)
+  tax BigInt @default(0)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+model TreasuryAccount {
+  id String @id @default(cuid())
+  orgId String
+  name String
+  kind TreasuryKind
+  bankName String?
+  iban String?
+  accountId String
+  active Boolean @default(true)
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  outgoing TreasuryMovement[] @relation("MovementSource")
+  incoming TreasuryMovement[] @relation("MovementDestination")
+  statements BankStatementLine[]
+  @@unique([orgId, name])
+}
+model TreasuryMovement {
+  id String @id @default(cuid())
+  orgId String
+  kind MovementType
+  status MovementStatus @default(DRAFT)
+  sourceId String?
+  destinationId String?
+  partyId String?
+  invoiceId String?
+  categoryAccountId String?
+  amount BigInt
+  occurredAt DateTime @db.Date
+  reference String?
+  memo String?
+  journalId String? @unique
+  createdAt DateTime @default(now())
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  source TreasuryAccount? @relation("MovementSource", fields: [sourceId], references: [id], onDelete: Restrict)
+  destination TreasuryAccount? @relation("MovementDestination", fields: [destinationId], references: [id], onDelete: Restrict)
+  party Party? @relation(fields: [partyId], references: [id], onDelete: SetNull)
+  invoice Invoice? @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  journal Journal? @relation("MovementJournal", fields: [journalId], references: [id], onDelete: Restrict)
+  statements BankStatementLine[]
+  @@index([orgId, occurredAt])
+}
+model BankStatementLine {
+  id String @id @default(cuid())
+  orgId String
+  treasuryId String
+  occurredAt DateTime @db.Date
+  amount BigInt
+  reference String?
+  status StatementStatus @default(UNMATCHED)
+  movementId String?
+  treasury TreasuryAccount @relation(fields: [treasuryId], references: [id], onDelete: Cascade)
+  movement TreasuryMovement? @relation(fields: [movementId], references: [id], onDelete: SetNull)
+  @@index([orgId, treasuryId, status])
+}
+model Installment {
+  id String @id @default(cuid())
+  orgId String
+  invoiceId String
+  dueAt DateTime @db.Date
+  amount BigInt
+  paid BigInt @default(0)
+  status InstallmentStatus @default(PENDING)
+  paidAt DateTime?
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  @@index([orgId, dueAt])
+}
+model CostCenter {
+  id String @id @default(cuid())
+  orgId String
+  name String
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  lines JournalLine[]
+  budgets Budget[]
+  @@unique([orgId, name])
+}
+model FinancialProject {
+  id String @id @default(cuid())
+  orgId String
+  name String
+  code String?
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  lines JournalLine[]
+  @@unique([orgId, name])
+}
+model Budget {
+  id String @id @default(cuid())
+  orgId String
+  name String
+  accountId String
+  centerId String?
+  startsAt DateTime @db.Date
+  endsAt DateTime @db.Date
+  limit BigInt
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  account Account @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  center CostCenter? @relation(fields: [centerId], references: [id], onDelete: SetNull)
+  @@index([orgId, startsAt, endsAt])
+}
+model RecurringRule {
+  id String @id @default(cuid())
+  orgId String
+  name String
+  amount BigInt
+  debitAccountId String
+  creditAccountId String
+  nextAt DateTime @db.Date
+  intervalMonths Int @default(1)
+  active Boolean @default(true)
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  @@index([orgId, nextAt])
+}
+model AuditLog {
+  id String @id @default(cuid())
+  orgId String
+  actorId String
+  action String
+  entity String
+  entityId String?
+  before Json?
+  after Json?
+  occurredAt DateTime @default(now())
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  @@index([orgId, occurredAt])
+}
+model DocumentCounter {
+  id String @id @default(cuid())
+  orgId String
+  prefix String
+  lastNumber Int @default(0)
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  @@unique([orgId, prefix])
+}
