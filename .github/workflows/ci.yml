@@ -4,11 +4,27 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+permissions:
+  contents: read
 jobs:
   quality:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: finance
+          POSTGRES_PASSWORD: finance_test_only
+          POSTGRES_DB: hesabino_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U finance -d hesabino_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
     env:
-      DATABASE_URL: postgresql://user:password@localhost:5432/testdb
+      DATABASE_URL: postgresql://finance:finance_test_only@localhost:5432/hesabino_test?schema=public
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -22,5 +38,11 @@ jobs:
         run: npm test
       - name: Type check
         run: npm run typecheck
+      - name: Initialize PostgreSQL and guards
+        run: |
+          npx prisma db push
+          npx prisma db execute --file prisma/guards.sql --schema prisma/schema.prisma
+      - name: PostgreSQL integration tests
+        run: npm run test:integration
       - name: Build
         run: npm run build
