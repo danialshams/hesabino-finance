@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useState, type Dispatch, type FormEvent, type SetStateAction } from 'react';
 import Link from 'next/link';
 import { demoApi, resetPublicDemo } from '@/lib/demo-store';
+import { formatMoney } from '@/lib/money';
 import { useRouter } from 'next/navigation';
 import { Activity, ArrowDownLeft, ArrowLeftRight, ArrowUpRight, BarChart3, Bell, BookOpen, Building2, CalendarClock, ChevronDown, CircleHelp, ClipboardList, CreditCard, Download, FileCheck2, FileText, Filter, FolderKanban, Landmark, LayoutDashboard, LogOut, Menu, MoreHorizontal, Plus, Printer, RefreshCcw, Search, Settings2, Shield, WalletCards, X, Check, Trash2, Pencil, TrendingUp, AlertCircle } from 'lucide-react';
 
@@ -30,7 +31,7 @@ const MENU=[
  {id:'audit',name:'تاریخچه فعالیت',icon:Activity,group:'تنظیمات'}
 ] as const;
 const T=(value:any)=>String(value??'—');
-const money=(n:any,toman:boolean)=>{if(n===null||n===undefined||n==='')return '—';try{const v=BigInt(String(n)); const div=toman?v/10n:v;return new Intl.NumberFormat('fa-IR').format(div)+(toman&&v%10n!==0n?'٫۱':'');}catch{return String(n)}};
+const money=(n:any,toman:boolean)=>{if(n===null||n===undefined||n==='')return '—';try{return formatMoney(BigInt(String(n)),toman)}catch{return String(n)}};
 const date=(x:any)=>{if(!x)return '—';const d=new Date(x);return isNaN(d.valueOf())?'—':new Intl.DateTimeFormat('fa-IR-u-ca-persian',{year:'numeric',month:'2-digit',day:'2-digit',timeZone:'UTC'}).format(d)};
 const today=()=>new Date().toISOString().slice(0,10);
 const STATUS:Record<string,string>={DRAFT:'پیش‌نویس',POSTED:'قطعی',REVERSED:'برگشت‌خورده',ISSUED:'صادرشده',PARTIAL:'تسویه جزئی',PAID:'تسویه‌شده',VOID:'باطل',OPEN:'باز',LOCKED:'قفل',CLOSED:'بسته',PENDING:'در انتظار',UNMATCHED:'تطبیق‌نشده',MATCHED:'تطبیق‌شده',RECEIPT:'دریافت',PAYMENT:'پرداخت',TRANSFER:'انتقال',BANK:'بانک',CASH:'صندوق',SALE:'فروش',PURCHASE:'خرید',CUSTOMER:'مشتری',SUPPLIER:'تأمین‌کننده',BOTH:'هر دو',ASSET:'دارایی',LIABILITY:'بدهی',EQUITY:'حقوق مالکانه',REVENUE:'درآمد',EXPENSE:'هزینه',OWNER:'مالک',ADMIN:'مدیر',ACCOUNTANT:'حسابدار',FINANCE_MANAGER:'مدیر مالی',VIEWER:'مشاهده‌گر'};
