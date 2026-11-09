@@ -34,3 +34,11 @@ test('invalid date rejected',()=>{
   assert.throws(()=>toIsoDate('not-a-date'));
   assert.ok(toIsoDate('2026-11-07') instanceof Date);
 });
+
+test('toman display preserves the exact one-rial decimal and negative fractions',()=>{
+  assert.equal(formatMoney(125n,true),'۱۲٫۵');
+  assert.equal(formatMoney(-125n,true),'−۱۲٫۵');
+  assert.equal(formatMoney(-5n,true),'−۰٫۵');
+  assert.equal(formatMoney(120n,true),'۱۲');
+  assert.equal(formatMoney(123n), '۱۲۳');
+});
