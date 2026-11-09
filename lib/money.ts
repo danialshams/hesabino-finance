@@ -24,9 +24,14 @@ export function assertBalanced(lines: { debit: bigint; credit: bigint }[]) {
 }
 export function asJson<T>(input: T): T { return JSON.parse(JSON.stringify(input, (_key, value) => typeof value === 'bigint' ? value.toString() : value)); }
 export function formatMoney(input: string | number | bigint, toman = false) {
-  const value = BigInt(input); const whole = toman ? value / 10n : value;
-  const frac = toman && value % 10n !== 0n ? '.۱' : '';
-  return new Intl.NumberFormat('fa-IR').format(whole) + frac;
+  const value = BigInt(input);
+  const formatter = new Intl.NumberFormat('fa-IR');
+  if (!toman) return formatter.format(value);
+  const negative = value < 0n;
+  const absolute = negative ? -value : value;
+  const whole = absolute / 10n;
+  const rialRemainder = absolute % 10n;
+  return (negative ? '−' : '') + formatter.format(whole) + (rialRemainder === 0n ? '' : '٫' + formatter.format(rialRemainder));
 }
 export function toIsoDate(value: unknown, field = 'تاریخ'): Date {
   const d = new Date(String(value));
