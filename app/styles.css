@@ -22,3 +22,7 @@
 .demo-ribbon{display:flex;align-items:center;justify-content:space-between;gap:18px;background:#eef5ff;border:1px solid #d4e5ff;padding:15px 20px;border-radius:14px;margin-bottom:22px;color:#285283}
 .demo-ribbon>div{display:grid;gap:5px}.demo-ribbon strong{font-size:13px;font-weight:800}.demo-ribbon span{font-size:11px;line-height:1.9;color:#5d789b}.demo-ribbon .demo-reset{background:white;flex-shrink:0;font-size:11px}
 @media(max-width:650px){.demo-ribbon{flex-direction:column;align-items:stretch;padding:14px}.demo-ribbon .demo-reset{align-self:flex-start}}
+
+/* Accessible contextual guidance for complex financial fields */
+.field-help{display:block;margin-top:2px;font-size:11px;line-height:1.85;font-weight:400;color:var(--sub);max-width:44rem}
+.page-heading p{max-width:60rem;line-height:1.9}
